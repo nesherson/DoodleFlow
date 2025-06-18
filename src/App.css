@@ -1,11 +1,21 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+	max-width: 1280px;
+	margin: 0 auto;
+	padding: 2rem;
+	text-align: center;
 }
 
 .wrapper {
-  display: flex; 
-  flex-direction: column;
+	display: flex;
+	flex-direction: column;
+}
+
+.canvas {
+	border: 1px solid black;
+  border-radius: 5px;
+  margin: 5px;
+}
+
+.outer-circle {
+	cursor: col-resize;
 }
