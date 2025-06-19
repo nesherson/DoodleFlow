@@ -1,44 +1,50 @@
-import { useState } from 'react';
-import { Stage, Layer, Rect, Group } from 'react-konva';
+import { useEffect, useState } from 'react';
+import { Stage, Layer, Rect } from 'react-konva';
+
+import Rectangle from './Rectangle';
 
 import './App.css'
 import type Konva from 'konva';
+import type { DrawingRectangle, Rectangle as RectangleType } from './types';
 
-type RectType = {
-  id: number,
+export interface IShapeProps {
+  id: string,
   x: number,
   y: number,
   width: number,
-  height: number
-}
-
-type CanvasAction = {
-  shapeId: number,
-  action: Action
-}
-
-enum Action {
-  Drawing = 0,
-  Resizing = 1
+  height: number,
+  stroke: string
 }
 
 function App() {
-  const [items, setItems] = useState<RectType[]>([]);
-  const [canvasAction, setCanvasAction] = useState<CanvasAction | null>(null);
+  const [items, setItems] = useState<RectangleType[]>([]);
+  const [selectedShapeId, setSelectedShapeId] = useState<string | null>(null);
+  const [drawingRectangle, setDrawingRectangle] = useState<DrawingRectangle>({
+    visible: false,
+    x1: 0,
+    y1: 0,
+    x2: 0,
+    y2: 0,
+  });
 
   const handleOnMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (e.target.parent !== null) {
+    if (e.target !== e.target.getStage())
       return;
-    }
 
-    const newItem = { id: items.length + 1, x: e.evt.offsetX, y: e.evt.offsetY, width: 1, height: 1 };
+    setSelectedShapeId(null);
 
-    setCanvasAction({ shapeId: newItem.id, action: Action.Drawing });
-    setItems(prev => [
-      ...prev,
-      newItem
-    ]);
+    const pos = e.target.getStage().getPointerPosition();
 
+    if (pos === null)
+      return;
+
+    setDrawingRectangle({
+      x1: pos.x,
+      y1: pos.y,
+      x2: pos.x,
+      y2: pos.y,
+      visible: true
+    });
   }
 
   const handleOnMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -47,90 +53,72 @@ function App() {
     if (stage) {
       stage.container().style.cursor = "default";
     }
-    setCanvasAction(null);
+
+    const newItem = {
+      id: crypto.randomUUID(),
+      x: Math.min(drawingRectangle.x1, drawingRectangle.x2),
+      y: Math.min(drawingRectangle.y1, drawingRectangle.y2),
+      width: Math.abs(drawingRectangle.x2 - drawingRectangle.x1),
+      height: Math.abs(drawingRectangle.y2 - drawingRectangle.y1),
+      stroke: "black"
+    };
+
+    setItems(prev => [
+      ...prev,
+      newItem
+    ]);
+
+    setTimeout(() => {
+      setDrawingRectangle({
+        ...drawingRectangle,
+        visible: false,
+      });
+    });
   }
 
   const handleOnMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    switch (canvasAction?.action) {
-      case Action.Drawing: {
-        const itemToDraw = items.find(i => i.id === canvasAction?.shapeId);
+    const pos = e.target.getStage()?.getPointerPosition();
 
-        if (!itemToDraw)
-          return;
+    if (!pos)
+      return;
 
-        const startPosX = itemToDraw.x;
-        const startPosY = itemToDraw.y;
-        const endPosX = e.evt.offsetX;
-        const endPosY = e.evt.offsetY;
-        let width = endPosX - startPosX;
-        let height = endPosY - startPosY;
-
-        if (endPosX < startPosX) {
-          width = (startPosX - endPosX) * -1;
-        }
-
-        if (endPosY < startPosY) {
-          height = (startPosY - endPosY) * -1;
-        }
-
-        itemToDraw.width = width;
-        itemToDraw.height = height;
-
-        setItems(prev => [
-          ...prev.filter(x => x.id !== itemToDraw.id),
-          itemToDraw
-        ]);
-
-        break;
-      }
-      case Action.Resizing: {
-      }
-    }
-
-
+    setDrawingRectangle({
+      ...drawingRectangle,
+      x2: pos.x,
+      y2: pos.y,
+    });
   }
 
   const handleClearOnClick = () => {
     setItems([]);
   }
 
-  const handleOuterRectOnMouseOver = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = e.target.getStage();
+  const deleteSelectedShape = () => {
+    const selectedShape = items.find(item => item.id === selectedShapeId);
 
-    if (stage === null)
+    if (!selectedShape)
       return;
 
-    stage.container().style.cursor = "col-resize";
+    setItems(prev => [
+      ...prev.filter(prevItem => prevItem.id !== selectedShapeId)
+    ]);
+    setSelectedShapeId(null);
   }
 
-  const handleOuterRectOnMouseOut = (e: Konva.KonvaEventObject<MouseEvent>) => {
-    const stage = e.target.getStage();
-
-    if (stage === null)
-      return;
-
-    stage.container().style.cursor = "default";
-  }
-
-  const handleOuterRectOnMouseDown = (e: Konva.KonvaEventObject<MouseEvent>) => {
-  }
-
-  const handleOuterRectOnMouseUp = (e: Konva.KonvaEventObject<MouseEvent>, id: number) => {
-  }
-
-  const handleInnerRectOnMouseDown = (e: Konva.KonvaEventObject<MouseEvent>, id: number) => {
-    const stage = e.target.getStage();
-
-    if (stage) {
-      stage.container().style.cursor = "grabbing";
+  const handleOnKeyDown = (e: KeyboardEvent) => {
+    switch (e.key) {
+      case "Delete": {
+        deleteSelectedShape();
+        break;
+      }
     }
   }
 
-  const handleInnerRectOnMouseUp = (e: Konva.KonvaEventObject<MouseEvent>) => {
+  useEffect(() => {
+    window.addEventListener("keydown", handleOnKeyDown);
 
-
-    // setCanvasAction(null);
-  }
+    return () => window.removeEventListener("keydown", handleOnKeyDown);
+  });
 
   return (
     <div className='wrapper'>
@@ -144,41 +132,38 @@ function App() {
         onMouseMove={handleOnMouseMove}
         className='canvas'>
         <Layer>
-          {
-            items.map(item => {
-              const x = item.width > 0 ? item.x - 2 : item.x + 2;
-              const y = item.height > 0 ? item.y - 2 : item.y + 2;
-              const width = item.width > 0 ? item.width + 4 : item.width - 4;
-              const height = item.height > 0 ? item.height + 4 : item.height - 4;
-
-              return <Group
+          {items.map((item, i) => {
+            return (
+              <Rectangle
                 key={item.id}
-                draggable={true}>
-                <Rect
-                  x={x}
-                  y={y}
-                  width={width}
-                  height={height}
-                  fill={"black"}
-                  onMouseOver={handleOuterRectOnMouseOver}
-                  onMouseOut={handleOuterRectOnMouseOut}
-                  onMouseDown={handleOuterRectOnMouseDown}
-                  onMouseUp={(e) => handleOuterRectOnMouseUp(e, item.id)}
-                />
-                <Rect
-                  x={item.x}
-                  y={item.y}
-                  width={item.width}
-                  height={item.height}
-                  fill="green"
-                  onMouseDown={(e) => handleInnerRectOnMouseDown(e, item.id)}
-                  onMouseUp={handleInnerRectOnMouseUp} />
-              </Group>
-            })
-          }
+                shapeProps={item}
+                isSelected={item.id === selectedShapeId}
+                onSelect={() => {
+                  setSelectedShapeId(item.id);
+                }}
+                onChange={(newAttrs) => {
+                  const tempItems = items.slice();
+                  tempItems[i] = newAttrs;
+                  setItems(tempItems);
+                }}
+              />
+            );
+          })}
+          {drawingRectangle.visible && (
+            <Rect
+              x={Math.min(drawingRectangle.x1, drawingRectangle.x2)}
+              y={Math.min(drawingRectangle.y1, drawingRectangle.y2)}
+              width={Math.abs(drawingRectangle.x2 - drawingRectangle.x1)}
+              height={Math.abs(drawingRectangle.y2 - drawingRectangle.y1)}
+              cornerRadius={5}
+              stroke="black"
+            />
+          )}
         </Layer>
       </Stage>
-      <button type='button' onClick={handleClearOnClick}>Clear</button>
+      <div className='btn-wrapper'>
+        <button type='button' onClick={handleClearOnClick}>Clear</button>
+      </div>
     </div>
   )
 }

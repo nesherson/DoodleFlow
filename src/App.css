@@ -19,3 +19,7 @@
 .outer-circle {
 	cursor: col-resize;
 }
+
+.btn-wrapper {
+	display: flex;
+}
