@@ -54,26 +54,28 @@ function App() {
       stage.container().style.cursor = "default";
     }
 
-    const newItem = {
-      id: crypto.randomUUID(),
-      x: Math.min(drawingRectangle.x1, drawingRectangle.x2),
-      y: Math.min(drawingRectangle.y1, drawingRectangle.y2),
-      width: Math.abs(drawingRectangle.x2 - drawingRectangle.x1),
-      height: Math.abs(drawingRectangle.y2 - drawingRectangle.y1),
-      stroke: "black"
-    };
+    if (drawingRectangle.visible) {
+      const newItem = {
+        id: crypto.randomUUID(),
+        x: Math.min(drawingRectangle.x1, drawingRectangle.x2),
+        y: Math.min(drawingRectangle.y1, drawingRectangle.y2),
+        width: Math.abs(drawingRectangle.x2 - drawingRectangle.x1),
+        height: Math.abs(drawingRectangle.y2 - drawingRectangle.y1),
+        stroke: "black"
+      };
 
-    setItems(prev => [
-      ...prev,
-      newItem
-    ]);
+      setItems(prev => [
+        ...prev,
+        newItem
+      ]);
 
-    setTimeout(() => {
-      setDrawingRectangle({
-        ...drawingRectangle,
-        visible: false,
+      setTimeout(() => {
+        setDrawingRectangle({
+          ...drawingRectangle,
+          visible: false,
+        });
       });
-    });
+    }
   }
 
   const handleOnMouseMove = (e: Konva.KonvaEventObject<MouseEvent>) => {
